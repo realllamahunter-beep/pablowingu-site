@@ -16,13 +16,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ valid: false, error: 'Missing parameters' });
     }
 
-    // Look up the one‑time code in Upstash
-    const data = await redis.get(`code:${code}`);
+    // Look up the one‑time code (with prefix)
+    const data = await redis.get(`pablowingu:code:${code}`);
     if (!data) {
       return res.status(200).json({ valid: false, reason: 'invalid_code' });
     }
 
-    // Verify the stored UID and counter match the URL parameters
     if (data.uid !== uid || data.counter !== parseInt(counter)) {
       return res.status(200).json({ valid: false, reason: 'tampered' });
     }
@@ -31,9 +30,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ valid: false, reason: 'already_used' });
     }
 
-    // Mark the code as used – this makes the link one‑time
+    // Mark as used
     data.used = true;
-    await redis.set(`code:${code}`, data, { ex: 600 }); // keep for 10 minutes
+    await redis.set(`pablowingu:code:${code}`, data, { ex: 600 });
 
     return res.status(200).json({ valid: true });
   } catch (e) {
